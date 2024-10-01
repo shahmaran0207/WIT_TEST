@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Geolocation API 사용 예시</title>
+    <link href="/css/style.css" rel="stylesheet">
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC6SJSuCl1cJQl9ty2uBCo2xhvJCa6U8eo"></script>
+ <!-- Google Maps API 추가 -->
+    <style>
+        #map {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<h1>Geolocation API로 현재 위치 가져오기</h1><br><br>
+<button onclick="getLocation()">위치 찾기</button><br>
+<p id="status">위치를 찾지 못했습니다</p>
+<div id="map"></div> <!-- 지도를 표시할 영역 -->
+
+<script>
+    let map, marker;
+
+    function initMap(lat, lng) {
+        const location = { lat: lat, lng: lng };
+
+        // 지도 초기화
+        map = new google.maps.Map(document.getElementById("map"), {
+            center: location,
+            zoom: 15
+        });
+
+        // 마커 추가
+        marker = new google.maps.Marker({
+            position: location,
+            map: map
+        });
+    }
+
+    function updateMap(lat, lng) {
+        const location = { lat: lat, lng: lng };
+        map.setCenter(location);
+        marker.setPosition(location);
+    }
+
+    function getLocation() {
+        const status = document.getElementById("status");
+
+        // Geolocation API 지원 여부 확인
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    status.textContent = `위도: ${latitude}, 경도: ${longitude}`;
+
+                    // 지도가 처음 로드되었는지 확인하고, 그렇지 않다면 위치 업데이트
+                    if (!map) {
+                        initMap(latitude, longitude);
+                    } else {
+                        updateMap(latitude, longitude);
+                    }
+                },
+                (error) => {
+                    status.textContent = `위치 정보를 가져올 수 없습니다: ${error.message}`;
+                },
+                {
+                    enableHighAccuracy: true, // 정확도 우선 모드
+                    timeout: 10000,           // 10초 이내에 응답 없으면 에러 발생
+                    maximumAge: 0             // 항상 최신 위치 정보 수집
+                }
+            );
+        } else {
+            status.textContent = "브라우저가 위치 서비스를 지원하지 않습니다.";
+        }
+    }
+</script>
+</body>
+</html>

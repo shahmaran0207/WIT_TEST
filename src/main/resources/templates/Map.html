@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Daum Postcode API 스크립트 추가 -->
+    <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    <!-- Kakao 지도 API 추가 -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bfb339379f57c062aa28eb2f80fc8291&libraries=services"></script>
+
+    <style>
+        #map {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="min-h-screen flex flex-col bg-orange-50">
+    <main class="flex-1 flex">
+        <div class="flex-1 p-4 md:p-6 mx-8 mt-16 max-w-[900px] mx-auto">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold mb-4">배송 정보</h2><br>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="mr-12">
+                        <ul class="space-y-4">
+                            <li class="flex items-center justify-between gap-4">
+                                <div class="flex items-center gap-4">
+                                    <div>
+                                        <h3>배송 주소: 미입력시 회원가입시 기입한 주소로 배송됩니다.</h3><br>
+                                        <form name="insert">
+                                            <!-- 첫 번째 주소 입력 섹션 -->
+                                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="zip_code1">우편번호 1</label>
+                                                    <input class="flex h-10 rounded-md border px-3 py-2 text-sm w-full" id="zip_code1" type="text" placeholder="주소를 검색해주세요." name="zip_code1" readonly />
+                                                </div>
+                                                <div class="grid gap-2 flex items-end">
+                                                    <button class="inline-flex items-center justify-center text-sm font-medium bg-orange-600 text-white hover:bg-orange-500 rounded-md" id="search1" style="height: 2.5rem;" type="button">주소 검색하기 1</button>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="primary_address1">도로명 (지번) 주소 1</label>
+                                                    <input class="flex h-10 w-full rounded-md border px-3 py-2 text-sm" id="primary_address1" placeholder="주소를 검색해주세요." required="" type="text" name="primary_address1" readonly />
+                                                </div>
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="address_details1">상세 주소 1</label>
+                                                    <input class="flex h-10 w-full rounded-md border px-3 py-2 text-sm" id="address_details1" placeholder="상세주소를 입력해주세요." required="" type="text" name="address_details1">
+                                                </div>
+                                            </div>
+                                            <button id="show_marker1" class="bg-blue-500 text-white px-4 py-2 rounded">마커 표시 1</button>
+
+                                            <!-- 두 번째 주소 입력 섹션 -->
+                                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="zip_code2">우편번호 2</label>
+                                                    <input class="flex h-10 rounded-md border px-3 py-2 text-sm w-full" id="zip_code2" type="text" placeholder="주소를 검색해주세요." name="zip_code2" readonly />
+                                                </div>
+                                                <div class="grid gap-2 flex items-end">
+                                                    <button class="inline-flex items-center justify-center text-sm font-medium bg-orange-600 text-white hover:bg-orange-500 rounded-md" id="search2" style="height: 2.5rem;" type="button">주소 검색하기 2</button>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="primary_address2">도로명 (지번) 주소 2</label>
+                                                    <input class="flex h-10 w-full rounded-md border px-3 py-2 text-sm" id="primary_address2" placeholder="주소를 검색해주세요." required="" type="text" name="primary_address2" readonly />
+                                                </div>
+                                                <div class="grid gap-2">
+                                                    <label class="text-sm font-medium leading-none" for="address_details2">상세 주소 2</label>
+                                                    <input class="flex h-10 w-full rounded-md border px-3 py-2 text-sm" id="address_details2" placeholder="상세주소를 입력해주세요." required="" type="text" name="address_details2">
+                                                </div>
+                                            </div>
+                                            <button id="show_marker2" class="bg-blue-500 text-white px-4 py-2 rounded">마커 표시 2</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- 지도 표시 -->
+                <div id="map"></div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    let map;
+    let marker1 = null;
+    let marker2 = null;
+    let line = null;
+
+    // 지도 초기화 함수
+    function initMap() {
+        map = new kakao.maps.Map(document.getElementById('map'), {
+            center: new kakao.maps.LatLng(37.5665, 126.9780), // 초기 중심 좌표 (서울)
+            level: 5 // 확대 레벨
+        });
+    }
+
+    // 마커 옵션 생성 함수
+    function createMarkerOptions(position, markerType) {
+        const markerImageSrc = `http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_number_blue.png`; // 번호 마커 이미지
+        const imageSize = new kakao.maps.Size(36, 37); // 마커 이미지 크기
+        const imgOptions = {
+            spriteSize: new kakao.maps.Size(36, 691), // 스프라이트 이미지 전체 크기
+            spriteOrigin: markerType === 'marker1' ? new kakao.maps.Point(0, 0) : new kakao.maps.Point(0, 36), // 마커1: 0, 마커2: 36
+            offset: new kakao.maps.Point(13, 37) // 마커 좌표 위치 조정
+        };
+
+        const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize, imgOptions);
+
+        return {
+            position: position, // 마커 표시 위치
+            image: markerImage // 마커 이미지
+        };
+    }
+
+
+    // 주소로 좌표를 검색하여 마커 표시
+    function searchAddressToMarker(address, markerType) {
+        const geocoder = new kakao.maps.services.Geocoder();
+        geocoder.addressSearch(address, function (result, status) {
+            if (status === kakao.maps.services.Status.OK) {
+                const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+
+                if (markerType === 'marker1') {
+                    if (marker1) marker1.setMap(null); // 기존 마커 제거
+                    marker1 = new kakao.maps.Marker(createMarkerOptions(coords, 'marker1'));
+                    marker1.setMap(map); // 첫 번째 마커 추가
+                    map.setCenter(coords); // 첫 번째 마커에서만 지도 중심 이동
+                } else if (markerType === 'marker2') {
+                    if (marker2) marker2.setMap(null); // 기존 마커 제거
+                    marker2 = new kakao.maps.Marker(createMarkerOptions(coords, 'marker2'));
+                    marker2.setMap(map); // 두 번째 마커 추가
+                }
+
+                // 두 마커가 모두 있으면 선을 그림
+                if (marker1 && marker2) {
+                    if (line) line.setMap(null); // 기존 선 제거
+                    line = new kakao.maps.Polyline({
+                        path: [marker1.getPosition(), marker2.getPosition()],
+                        strokeWeight: 5,
+                        strokeColor: '#ff0000',
+                        strokeOpacity: 0.7,
+                        strokeStyle: 'solid'
+                    });
+                    line.setMap(map);
+                }
+            }
+        });
+    }
+
+    // 첫 번째 주소 검색 버튼 이벤트
+    document.getElementById('search1').addEventListener('click', function () {
+        new daum.Postcode({
+            oncomplete: function (data) {
+                let fullAddr = data.roadAddress ? data.roadAddress : data.jibunAddress;
+                let extraAddr = '';
+                if (data.bname !== '') extraAddr += data.bname;
+                if (data.buildingName !== '') extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                fullAddr += (extraAddr !== '' ? ' (' + extraAddr + ')' : '');
+
+                document.insert.primary_address1.value = fullAddr;
+                document.insert.zip_code1.value = data.zonecode;
+                document.insert.address_details1.focus();
+            }
+        }).open();
+    });
+
+    // 두 번째 주소 검색 버튼 이벤트
+    document.getElementById('search2').addEventListener('click', function () {
+        new daum.Postcode({
+            oncomplete: function (data) {
+                let fullAddr = data.roadAddress ? data.roadAddress : data.jibunAddress;
+                let extraAddr = '';
+                if (data.bname !== '') extraAddr += data.bname;
+                if (data.buildingName !== '') extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+                fullAddr += (extraAddr !== '' ? ' (' + extraAddr + ')' : '');
+
+                document.insert.primary_address2.value = fullAddr;
+                document.insert.zip_code2.value = data.zonecode;
+                document.insert.address_details2.focus();
+            }
+        }).open();
+    });
+
+    // 첫 번째 마커 표시
+    document.getElementById('show_marker1').addEventListener('click', function (event) {
+        event.preventDefault();
+        const address1 = document.getElementById('primary_address1').value;
+        if (address1) {
+            searchAddressToMarker(address1, 'marker1');
+        } else {
+            alert('주소를 먼저 검색해 주세요.');
+        }
+    });
+
+    // 두 번째 마커 표시
+    document.getElementById('show_marker2').addEventListener('click', function (event) {
+        event.preventDefault();
+        const address2 = document.getElementById('primary_address2').value;
+        if (address2) {
+            searchAddressToMarker(address2, 'marker2');
+        } else {
+            alert('주소를 먼저 검색해 주세요.');
+        }
+    });
+
+    // 페이지 로딩 시 지도 초기화
+    window.onload = initMap;
+</script>
+</body>
+</html>
