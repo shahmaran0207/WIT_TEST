@@ -24,4 +24,9 @@ public class PageController {
     public String Map() {
         return "Map";
     }
+
+    @GetMapping("/option")
+    public String option() {
+        return "option";
+    }
 }
