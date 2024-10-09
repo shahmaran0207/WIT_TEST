@@ -29,4 +29,9 @@ public class PageController {
     public String option() {
         return "option";
     }
+
+    @GetMapping("/Board")
+    public String Board() {
+        return "Board";
+    }
 }

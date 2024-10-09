@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Hub</title>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bfb339379f57c062aa28eb2f80fc8291&libraries=services"></script>
+  <script src="https://cdn.ckeditor.com/ckeditor5/39.0.0/classic/ckeditor.js"></script>
+
+  <style>
+    #map {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+<div id="page-container">
+  <main id="main-content">
+    <section id="delivery-info">
+      <h2>배송 정보</h2>
+      <form id="insert-form">
+        <div id="address1">
+          <label for="zip_code1">우편번호 1</label>
+          <input id="zip_code1" type="text" placeholder="주소를 검색해주세요." name="zip_code1" readonly />
+          <button id="search1" type="button">주소 검색하기 1</button>
+
+          <label for="primary_address1">도로명 (지번) 주소 1</label>
+          <input id="primary_address1" placeholder="주소를 검색해주세요." type="text" name="primary_address1" readonly />
+
+          <label for="address_details1">상세 주소 1</label>
+          <input id="address_details1" placeholder="상세주소를 입력해주세요." type="text" name="address_details1" />
+
+          <button id="show_marker1">마커 표시 1</button>
+        </div>
+
+        <div id="address2">
+          <label for="zip_code2">우편번호 2</label>
+          <input id="zip_code2" type="text" placeholder="주소를 검색해주세요." name="zip_code2" readonly />
+          <button id="search2" type="button">주소 검색하기 2</button>
+
+          <label for="primary_address2">도로명 (지번) 주소 2</label>
+          <input id="primary_address2" placeholder="주소를 검색해주세요." type="text" name="primary_address2" readonly />
+
+          <label for="address_details2">상세 주소 2</label>
+          <input id="address_details2" placeholder="상세주소를 입력해주세요." type="text" name="address_details2" />
+
+          <button id="show_marker2">마커 표시 2</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="map-container">
+      <div id="map"></div>
+    </section>
+
+    <section id="post-creation">
+      <h2>게시글 작성</h2>
+
+      <div id="section1">
+        <label for="section1_part1">게시글 내용</label>
+        <textarea id="section1_part1" placeholder="주소가 여기에 표시됩니다." readonly></textarea>
+        <textarea id="section1_part2" placeholder="첫 번째 섹션 두 번째 부분 내용을 입력해주세요." required></textarea>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="section2">
+        <label for="section2_part1">게시글 내용</label>
+        <textarea id="section2_part1" placeholder="주소가 여기에 표시됩니다." readonly></textarea>
+        <textarea id="section2_part2" placeholder="두 번째 섹션 두 번째 부분 내용을 입력해주세요." required></textarea>
+      </div>
+
+      <button id="submit-post">게시글 작성</button>
+    </section>
+  </main>
+</div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bfb339379f57c062aa28eb2f80fc8291"></script>
+
+<script>
+  let map;
+  let marker1 = null;
+  let marker2 = null;
+  let line = null;
+
+  function initMap() {
+    map = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(37.5665, 126.9780),
+      level: 5
+    });
+  }
+
+  function createMarkerOptions(position, markerType) {
+    const markerImageSrc = `http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_number_blue.png`;
+    const imageSize = new kakao.maps.Size(36, 37);
+    const imgOptions = {
+      spriteSize: new kakao.maps.Size(36, 691),
+      spriteOrigin: markerType === 'marker1' ? new kakao.maps.Point(0, 0) : new kakao.maps.Point(0, 36),
+      offset: new kakao.maps.Point(13, 37)
+    };
+    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize, imgOptions);
+    return {
+      position: position,
+      image: markerImage
+    };
+  }
+
+  function searchAddressToMarker(address, markerType) {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, function (result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+        if (markerType === 'marker1') {
+          if (marker1) marker1.setMap(null);
+          marker1 = new kakao.maps.Marker(createMarkerOptions(coords, 'marker1'));
+          marker1.setMap(map);
+          map.setCenter(coords);
+        } else if (markerType === 'marker2') {
+          if (marker2) marker2.setMap(null);
+          marker2 = new kakao.maps.Marker(createMarkerOptions(coords, 'marker2'));
+          marker2.setMap(map);
+        }
+
+        if (marker1 && marker2) {
+          if (line) line.setMap(null);
+          line = new kakao.maps.Polyline({
+            path: [marker1.getPosition(), marker2.getPosition()],
+            strokeWeight: 5,
+            strokeColor: '#ff0000',
+            strokeOpacity: 0.7,
+            strokeStyle: 'solid'
+          });
+          line.setMap(map);
+        }
+      }
+    });
+  }
+
+  document.getElementById('search1').addEventListener('click', function () {
+    new daum.Postcode({
+      oncomplete: function (data) {
+        let fullAddr = data.roadAddress ? data.roadAddress : data.jibunAddress;
+        let extraAddr = '';
+        if (data.bname !== '') extraAddr += data.bname;
+        if (data.buildingName !== '') extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+        fullAddr += (extraAddr !== '' ? ' (' + extraAddr + ')' : '');
+        document.getElementById('primary_address1').value = fullAddr;
+        document.getElementById('zip_code1').value = data.zonecode;
+        document.getElementById('address_details1').focus();
+      }
+    }).open();
+  });
+
+  document.getElementById('search2').addEventListener('click', function () {
+    new daum.Postcode({
+      oncomplete: function (data) {
+        let fullAddr = data.roadAddress ? data.roadAddress : data.jibunAddress;
+        let extraAddr = '';
+        if (data.bname !== '') extraAddr += data.bname;
+        if (data.buildingName !== '') extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+        fullAddr += (extraAddr !== '' ? ' (' + extraAddr + ')' : '');
+        document.getElementById('primary_address2').value = fullAddr;
+        document.getElementById('zip_code2').value = data.zonecode;
+        document.getElementById('address_details2').focus();
+      }
+    }).open();
+  });
+
+  document.getElementById('show_marker1').addEventListener('click', function (event) {
+    event.preventDefault();
+    const address1 = document.getElementById('primary_address1').value;
+    if (address1) {
+      searchAddressToMarker(address1, 'marker1');
+      document.getElementById('section1_part1').value = address1;
+    }
+  });
+
+  document.getElementById('show_marker2').addEventListener('click', function (event) {
+    event.preventDefault();
+    const address2 = document.getElementById('primary_address2').value;
+    if (address2) {
+      searchAddressToMarker(address2, 'marker2');
+      document.getElementById('section2_part1').value = address2;
+    }
+  });
+
+  document.getElementById('submit-post').addEventListener('click', function () {
+    alert('게시글이 성공적으로 작성되었습니다.');
+  });
+
+  window.onload = initMap;
+</script>
+
+<script>
+  ClassicEditor
+          .create(document.querySelector('#section1_part2'))
+          .catch(error => { console.error(error); });
+
+  ClassicEditor
+          .create(document.querySelector('#section2_part2'))
+          .catch(error => { console.error(error); });
+</script>
+
+</body>
+</html>
