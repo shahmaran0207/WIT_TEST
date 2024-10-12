@@ -30,6 +30,11 @@ public class PageController {
         return "option";
     }
 
+    @GetMapping("/option2")
+    public String option2() {
+        return "option2";
+    }
+
     @GetMapping("/Board")
     public String Board() {
         return "Board";

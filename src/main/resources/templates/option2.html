@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Hub</title>
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bfb339379f57c062aa28eb2f80fc8291&libraries=services"></script>
+
+  <style>
+    #map {
+      width: 100%;
+      height: 400px;
+      margin-top: 20px;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 20px 0;
+    }
+    #date-container {
+      margin: 20px 0;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="page-container">
+  <main id="main-content">
+
+    <!-- 날짜 선택 섹션 -->
+    <section id="date-container">
+      <h2>여행 날짜 선택</h2>
+      <label for="start-date">여행 시작일:</label>
+      <input type="date" id="start-date" name="start-date" required>
+
+      <label for="end-date">여행 종료일:</label>
+      <input type="date" id="end-date" name="end-date" required>
+
+      <button id="select-dates">여행 날짜 선택</button>
+    </section>
+
+    <!-- 배송 정보 섹션 -->
+    <section id="delivery-info-container">
+      <h2>배송 정보</h2>
+      <div id="delivery-info"></div>
+    </section>
+
+    <!-- 지도 섹션 -->
+    <section id="map-container">
+      <div id="map"></div>
+    </section>
+
+    <!-- 게시글 작성 섹션 -->
+    <section id="post-creation-container">
+      <h2>게시글 작성</h2>
+      <div id="post-creation"></div>
+    </section>
+  </main>
+</div>
+
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=bfb339379f57c062aa28eb2f80fc8291"></script>
+
+<script>
+  let map;
+  let markers = [];
+  let lines = [];
+  let totalSections = 0; // 섹션 번호를 추적
+
+  function initMap() {
+    map = new kakao.maps.Map(document.getElementById('map'), {
+      center: new kakao.maps.LatLng(37.5665, 126.9780),
+      level: 5
+    });
+  }
+
+  // 마커 옵션 생성 함수
+  function createMarkerOptions(position, markerType) {
+    const markerImageSrc = `http://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_number_blue.png`;
+    const imageSize = new kakao.maps.Size(36, 37);
+    const imgOptions = {
+      spriteSize: new kakao.maps.Size(36, 691),
+      spriteOrigin: new kakao.maps.Point(0, (markerType - 1) * 36), // 마커 타입에 따라 이미지가 다름
+      offset: new kakao.maps.Point(13, 37)
+    };
+    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, imageSize, imgOptions);
+    return {
+      position: position,
+      image: markerImage
+    };
+  }
+
+  // 주소를 검색해 마커로 표시하는 함수
+  function searchAddressToMarker(address, markerType) {
+    const geocoder = new kakao.maps.services.Geocoder();
+    geocoder.addressSearch(address, function (result, status) {
+      if (status === kakao.maps.services.Status.OK) {
+        const coords = new kakao.maps.LatLng(result[0].y, result[0].x);
+        if (markers[markerType - 1]) markers[markerType - 1].setMap(null); // 기존 마커 제거
+        markers[markerType - 1] = new kakao.maps.Marker(createMarkerOptions(coords, markerType));
+        markers[markerType - 1].setMap(map);
+        map.setCenter(coords);
+
+        // 모든 마커가 설정되면, 라인 그리기
+        drawLines();
+      }
+    });
+  }
+
+  // 마커 사이에 라인을 그리는 함수
+  function drawLines() {
+    if (lines.length > 0) {
+      lines.forEach(line => line.setMap(null)); // 기존 라인 제거
+    }
+
+    const path = markers.map(marker => marker.getPosition());
+    if (path.length > 1) {
+      const line = new kakao.maps.Polyline({
+        path: path,
+        strokeWeight: 5,
+        strokeColor: '#ff0000',
+        strokeOpacity: 0.7,
+        strokeStyle: 'solid'
+      });
+      line.setMap(map);
+      lines.push(line);
+    }
+  }
+
+  // 시작일 선택 시 종료일 최소 날짜를 설정
+  document.getElementById('start-date').addEventListener('change', function () {
+    const startDate = document.getElementById('start-date').value;
+    if (startDate) {
+      document.getElementById('end-date').min = startDate; // 종료일의 최소값을 시작일로 설정
+    }
+  });
+
+  // 날짜 선택 버튼 클릭 시 실행
+  document.getElementById('select-dates').addEventListener('click', function () {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+
+    if (!startDate || !endDate) {
+      alert('여행 시작일과 종료일을 선택해 주세요.');
+      return;
+    }
+
+    const dayCount = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (dayCount <= 0) {
+      alert('종료일은 시작일 이후로 선택해야 합니다.');
+      return;
+    }
+
+    totalSections = dayCount; // 섹션 수 = 여행 날짜 수
+    updateSections(totalSections); // 섹션 업데이트
+  });
+
+  // 동적으로 주소 검색 섹션과 게시글 섹션을 추가하는 함수
+  function updateSections(count) {
+    const deliveryInfoContainer = document.getElementById('delivery-info');
+    const postCreationContainer = document.getElementById('post-creation');
+
+    // 기존 내용 초기화
+    deliveryInfoContainer.innerHTML = '';
+    postCreationContainer.innerHTML = '';
+
+    for (let i = 1; i <= count; i++) {
+      // 배송 정보 섹션 추가
+      const addressSection = `
+                <div id="address${i}">
+                    <label for="zip_code${i}">우편번호 ${i}</label>
+                    <input id="zip_code${i}" type="text" placeholder="주소를 검색해주세요." name="zip_code${i}" readonly />
+                    <button id="search${i}" type="button">주소 검색하기 ${i}</button>
+
+                    <label for="primary_address${i}">도로명 (지번) 주소 ${i}</label>
+                    <input id="primary_address${i}" placeholder="주소를 검색해주세요." type="text" name="primary_address${i}" readonly />
+
+                    <label for="address_details${i}">상세 주소 ${i}</label>
+                    <input id="address_details${i}" placeholder="상세주소를 입력해주세요." type="text" name="address_details${i}" />
+
+                    <button id="show_marker${i}">마커 표시 ${i}</button>
+                </div>
+            `;
+      deliveryInfoContainer.insertAdjacentHTML('beforeend', addressSection);
+
+      // 게시글 작성 섹션 추가
+      const postSection = `
+                <div id="section${i}">
+                    <label for="section${i}_part1">게시글 내용</label>
+                    <textarea id="section${i}_part1" placeholder="주소가 여기에 표시됩니다." readonly></textarea>
+                    <textarea id="section${i}_part2" placeholder="섹션 ${i} 두 번째 부분 내용을 입력해주세요." required></textarea>
+                </div>
+                <div class="divider"></div>
+            `;
+      postCreationContainer.insertAdjacentHTML('beforeend', postSection);
+
+      // 주소 검색 이벤트 추가
+      document.getElementById(`search${i}`).addEventListener('click', function () {
+        new daum.Postcode({
+          oncomplete: function (data) {
+            let fullAddr = data.roadAddress ? data.roadAddress : data.jibunAddress;
+            let extraAddr = '';
+            if (data.bname !== '') extraAddr += data.bname;
+            if (data.buildingName !== '') extraAddr += (extraAddr !== '' ? ', ' + data.buildingName : data.buildingName);
+            fullAddr += (extraAddr !== '' ? ' (' + extraAddr + ')' : '');
+            document.getElementById(`primary_address${i}`).value = fullAddr;
+            document.getElementById(`zip_code${i}`).value = data.zonecode;
+            document.getElementById(`address_details${i}`).focus();
+          }
+        }).open();
+      });
+
+      // 마커 표시 이벤트 추가
+      document.getElementById(`show_marker${i}`).addEventListener('click', function (event) {
+        event.preventDefault();
+        const address = document.getElementById(`primary_address${i}`).value;
+        if (address) {
+          searchAddressToMarker(address, i);
+          document.getElementById(`section${i}_part1`).value = address;
+        } else {
+          alert('주소를 먼저 검색해 주세요.');
+        }
+      });
+    }
+  }
+
+  window.onload = initMap;
+</script>
+</body>
+</html>
