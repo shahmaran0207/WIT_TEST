@@ -39,4 +39,14 @@ public class PageController {
     public String Board() {
         return "Board";
     }
+
+    @GetMapping("/join")
+    public String join() {
+        return "join";
+    }
+
+    @GetMapping("/Signing")
+    public String Signing() {
+        return "Signing";
+    }
 }
