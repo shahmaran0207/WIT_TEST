@@ -49,4 +49,9 @@ public class PageController {
     public String Signing() {
         return "Signing";
     }
+
+    @GetMapping("/Social_Login")
+    public String Social_Login(){
+        return "Social_Login";
+    }
 }
