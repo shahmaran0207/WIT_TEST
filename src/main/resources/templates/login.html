@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Social_Login</title>
+</head>
+<body>
+<form>
+    <h1>회원가입</h1>
+    <div>email: <input type="email" id="signUpEmail" /></div>
+    <div>password: <input type="password" id="signUpPassword" /></div>
+    <button type="submit" id="signUpButton">회원가입</button>
+</form>
+
+<form method="POST">
+    <h1>로그인</h1>
+    <div>email: <input type="email" id="signInEmail" /></div>
+    <div>password: <input type="password" id="signInPassword" /></div>
+    <button type="button" id="signInButton">로그인</button>
+</form>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD1ukx1FfMVPjRyx_ycSd8TEVEEto2ZLnk",
+        authDomain: "wit-test-c0fc5.firebaseapp.com",
+        projectId: "wit-test-c0fc5",
+        storageBucket: "wit-test-c0fc5.appspot.com",
+        messagingSenderId: "545808558716",
+        appId: "1:545808558716:web:9c5cb6d830ba0fdc7f37f9",
+        measurementId: "G-Q3X0BHP39J"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+
+    // 회원가입 처리
+    document.getElementById("signUpButton").addEventListener("click", (event) => {
+        event.preventDefault();
+        const signUpEmail = document.getElementById("signUpEmail").value;
+        const signUpPassword = document.getElementById("signUpPassword").value;
+
+        createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword)
+            .then((userCredential) => {
+                console.log("회원가입 성공:", userCredential);
+            })
+            .catch((error) => {
+                console.error("회원가입 실패:", error.message);
+            });
+    });
+
+    document.getElementById("signInButton").addEventListener("click", async (event) => {
+        event.preventDefault();  // 폼의 기본 동작을 막음
+
+        const signInEmail = document.getElementById("signInEmail").value;
+        const signInPassword = document.getElementById("signInPassword").value;
+
+        if (!signInEmail || !signInPassword) {
+            alert("이메일과 비밀번호를 입력해주세요.");
+            return;
+        }
+
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, signInEmail, signInPassword);
+            const user = userCredential.user;
+            const idToken = await user.getIdToken();
+
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: signInEmail,
+                    token: idToken
+                })
+            });
+
+            if (response.ok) {
+                const redirectUrl = await response.text();  // 서버에서 받은 리디렉션 경로
+                window.location.href = redirectUrl;  // Board로 리디렉션
+            } else {
+                const errorMessage = await response.text();
+                alert("로그인 실패: " + errorMessage);
+            }
+        } catch (error) {
+            console.error("로그인 실패:", error.message);
+            alert("로그인 실패: " + error.message);
+        }
+    });
+
+
+
+</script>
+</body>
+</html>

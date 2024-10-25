@@ -45,8 +45,8 @@ public class PageController {
         return "join";
     }
 
-    @GetMapping("/Social_Login")
+    @GetMapping("/login")
     public String Social_Login(){
-        return "Social_Login";
+        return "login";
     }
 }
