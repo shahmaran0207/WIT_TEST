@@ -37,3 +37,6 @@ out/
 .vscode/
 
 **/application.yml
+
+# Firebase Admin SDK JSON 파일
+src/main/resources/firebase-adminsdk.json
