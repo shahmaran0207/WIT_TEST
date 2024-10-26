@@ -49,4 +49,9 @@ public class PageController {
     public String Social_Login(){
         return "login";
     }
+
+    @GetMapping("/kakao")
+    public String kakao() {
+        return "kakao";
+    }
 }
