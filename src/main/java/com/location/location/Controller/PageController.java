@@ -46,8 +46,13 @@ public class PageController {
     }
 
     @GetMapping("/login")
-    public String Social_Login(){
+    public String Login(){
         return "login";
+    }
+
+    @GetMapping("/login2")
+    public String Social_Login(){
+        return "login2";
     }
 
     @GetMapping("/kakao")

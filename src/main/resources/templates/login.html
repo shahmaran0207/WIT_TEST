@@ -1,142 +1,68 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Social_Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kakao Login with Firebase</title>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth.js"></script>
+
+    <!-- Kakao SDK -->
+    <script src="https://developers.kakao.com/sdk/js/kakao.min.js"></script>
 </head>
 <body>
-<form>
-    <h1>회원가입</h1>
-    <div>email: <input type="email" id="signUpEmail" /></div>
-    <div>password: <input type="password" id="signUpPassword" /></div>
-    <button type="submit" id="signUpButton">회원가입</button>
-</form>
+<h1>Link Kakao Account to Firebase</h1>
+<button id="login-kakao">Login with Kakao</button>
 
-<form method="POST">
-    <h1>로그인</h1>
-    <div>email: <input type="email" id="signInEmail" /></div>
-    <div>password: <input type="password" id="signInPassword" /></div>
-    <button type="button" id="signInButton">로그인</button>
-</form>
-
-<!-- 카카오 로그인 버튼 -->
-<button type="button" id="kakaoLoginButton">카카오로 로그인</button>
-
-<!-- Firebase 및 Kakao SDK 설정 -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
-    // Firebase 초기화
+<script>
+    // 1. Firebase 설정
     const firebaseConfig = {
         apiKey: "AIzaSyD1ukx1FfMVPjRyx_ycSd8TEVEEto2ZLnk",
         authDomain: "wit-test-c0fc5.firebaseapp.com",
         projectId: "wit-test-c0fc5",
         storageBucket: "wit-test-c0fc5.appspot.com",
         messagingSenderId: "545808558716",
-        appId: "1:545808558716:web:9c5cb6d830ba0fdc7f37f9",
-        measurementId: "G-Q3X0BHP39J"
+        appId: "1:545808558716:web:9c5cb6d830ba0fdc7f37f9"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth();
+    // Firebase 초기화
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
 
-    // 회원가입 처리
-    document.getElementById("signUpButton").addEventListener("click", (event) => {
-        event.preventDefault();
-        const signUpEmail = document.getElementById("signUpEmail").value;
-        const signUpPassword = document.getElementById("signUpPassword").value;
+    // 2. 카카오 SDK 초기화
+    Kakao.init('YOUR_KAKAO_JAVASCRIPT_KEY'); // 카카오 자바스크립트 키 입력
 
-        createUserWithEmailAndPassword(auth, signUpEmail, signUpPassword)
-            .then((userCredential) => {
-                console.log("회원가입 성공:", userCredential);
-            })
-            .catch((error) => {
-                console.error("회원가입 실패:", error.message);
-            });
-    });
-
-    // 일반 로그인 처리
-    document.getElementById("signInButton").addEventListener("click", async (event) => {
-        event.preventDefault();
-        const signInEmail = document.getElementById("signInEmail").value;
-        const signInPassword = document.getElementById("signInPassword").value;
-
-        if (!signInEmail || !signInPassword) {
-            alert("이메일과 비밀번호를 입력해주세요.");
-            return;
-        }
-
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, signInEmail, signInPassword);
-            const user = userCredential.user;
-            const idToken = await user.getIdToken();
-
-            const response = await fetch('/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: signInEmail, token: idToken })
-            });
-
-            if (response.ok) {
-                const redirectUrl = await response.text();
-                window.location.href = redirectUrl;
-            } else {
-                const errorMessage = await response.text();
-                alert("로그인 실패: " + errorMessage);
-            }
-        } catch (error) {
-            console.error("로그인 실패:", error.message);
-            alert("로그인 실패: " + error.message);
-        }
-    });
-
-    // 카카오 SDK 불러오기 및 초기화
-    const kakaoSdkUrl = "https://developers.kakao.com/sdk/js/kakao.min.js";
-    const kakaoScript = document.createElement("script");
-    kakaoScript.src = kakaoSdkUrl;
-    document.head.appendChild(kakaoScript);
-
-    kakaoScript.onload = () => {
-        Kakao.init("bfb339379f57c062aa28eb2f80fc8291"); // 카카오 앱 키를 여기에 입력
-        console.log("Kakao SDK 초기화 완료:", Kakao.isInitialized());
-    };
-
-    // 카카오 로그인 처리
-    document.getElementById("kakaoLoginButton").addEventListener("click", () => {
+    // 3. 카카오 로그인 핸들러
+    document.getElementById('login-kakao').addEventListener('click', () => {
         Kakao.Auth.login({
-            success: async (authObj) => {
-                console.log("카카오 로그인 성공:", authObj);
+            success: async function(authObj) {
+                console.log('Kakao login success:', authObj);
 
                 try {
-                    // 카카오 액세스 토큰을 백엔드로 전송하여 Firebase 커스텀 토큰을 발급받음
-                    const response = await fetch('/kakaoLogin', {
+                    // Firebase에 전달할 사용자 토큰 생성
+                    const kakaoAccessToken = authObj.access_token;
+
+                    // Firebase 커스텀 토큰 서버 호출 (백엔드 필요)
+                    const response = await fetch('/createFirebaseToken', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ accessToken: authObj.access_token })
+                        body: JSON.stringify({ kakaoToken: kakaoAccessToken })
                     });
 
-                    if (response.ok) {
-                        const { firebaseToken } = await response.json();
-                        // Firebase 커스텀 토큰으로 Firebase 로그인 처리
-                        await signInWithCustomToken(auth, firebaseToken);
-                        console.log("Firebase 로그인 성공");
+                    const { firebaseToken } = await response.json();
 
-                        // 로그인 성공 후 리디렉션
-                        window.location.href = "/dashboard";
-                    } else {
-                        const errorMessage = await response.text();
-                        console.error("Firebase 커스텀 토큰 발급 실패:", errorMessage);
-                        alert("카카오 로그인 실패: " + errorMessage);
-                    }
+                    // Firebase에 로그인
+                    const userCredential = await auth.signInWithCustomToken(firebaseToken);
+                    alert('Successfully logged in with Kakao!');
+                    console.log(userCredential.user);
                 } catch (error) {
-                    console.error("카카오 로그인 처리 중 오류:", error.message);
-                    alert("카카오 로그인 실패: " + error.message);
+                    console.error('Error during Firebase login:', error);
                 }
             },
-            fail: (error) => {
-                console.error("카카오 로그인 실패:", error);
-                alert("카카오 로그인 실패");
+            fail: function(err) {
+                console.error('Kakao login failed:', err);
             }
         });
     });
